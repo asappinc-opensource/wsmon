@@ -1,0 +1,6 @@
+# expect: is reserved
+image: { repository: registry.example.com/wsmon }
+client:
+  enabled: true
+  probes:
+    - { name: a, url: "ws://x", labels: { mode: idle } }

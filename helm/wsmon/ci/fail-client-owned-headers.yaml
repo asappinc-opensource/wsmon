@@ -1,0 +1,6 @@
+# expect: config.WSMON_HEADERS is set by the chart
+image: { repository: registry.example.com/wsmon }
+client:
+  enabled: true
+  probes:
+    - { name: a, url: "ws://x", config: { WSMON_HEADERS: "X-A=1" } }

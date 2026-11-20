@@ -1,0 +1,19 @@
+apiVersion: v2
+name: wsmon
+description: >-
+  wsmon WebSocket synthetic monitoring: the echo server, one probe vantage
+  (client), or both, from the single wsmon image. Turn each role on with
+  server.enabled / client.enabled.
+type: application
+# Chart version, SemVer MAJOR.MINOR.PATCH. Bump it whenever the chart changes
+# (ci/ fixtures excepted).
+version: 0.1.0
+# The image tag `make image` produces: the Makefile VERSION, no "v" prefix.
+# Used as the default image.tag; keep it equal to the Makefile VERSION.
+appVersion: "1.0.0"
+keywords:
+  - monitoring
+  - websocket
+  - synthetic
+  - probe
+  - echo

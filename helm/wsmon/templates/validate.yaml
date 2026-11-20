@@ -1,0 +1,5 @@
+{{- /* Render-time validation; renders nothing.
+With both roles disabled the chart renders nothing, so there is nothing to check. */}}
+{{- if or .Values.server.enabled .Values.client.enabled }}
+{{- include "wsmon.validate" . }}
+{{- end }}

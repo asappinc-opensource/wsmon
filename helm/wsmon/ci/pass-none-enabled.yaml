@@ -1,0 +1,4 @@
+# Both roles off: the chart renders nothing and checks nothing, even with
+# values that would fail if a role were on (no image, auth without a token).
+auth: { enabled: true }
+config: { WSMON_MODE: idle }

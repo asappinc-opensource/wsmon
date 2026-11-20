@@ -1,0 +1,164 @@
+{{- if .Values.client.enabled }}
+{{- $root := . }}
+{{- $c := .Values.client }}
+{{- $ctx := dict "root" . "component" "client" }}
+# One probe vantage: one Pod, one container per probe.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "wsmon.client.fullname" . }}
+  labels:
+    {{- include "wsmon.labels" $ctx | nindent 4 }}
+spec:
+  # Fixed at 1: a second replica would produce colliding series.
+  replicas: 1
+  # Old and new Pods must never run together.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "wsmon.selectorLabels" $ctx | nindent 6 }}
+  template:
+    metadata:
+      {{- $authChecksum := include "wsmon.authInline" . }}
+      {{- if or $authChecksum $c.podAnnotations }}
+      annotations:
+        {{- if $authChecksum }}
+        checksum/auth: {{ include (print $.Template.BasePath "/secret-auth.yaml") . | sha256sum }}
+        {{- end }}
+        {{- with $c.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      labels:
+        {{- include "wsmon.selectorLabels" $ctx | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "wsmon.serviceAccountName" $ctx }}
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: {{ $c.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        {{- range $i, $p := $c.probes }}
+        {{- $port := add $c.metricsBasePort $i }}
+        {{- $portName := printf "m-%d" $i }}
+        {{- $labels := include "wsmon.client.pairs" (dict "root" $root "probe" $p "key" "labels") }}
+        {{- $headers := include "wsmon.client.pairs" (dict "root" $root "probe" $p "key" "headers") }}
+        {{- $urlParams := include "wsmon.client.pairs" (dict "root" $root "probe" $p "key" "urlParams") }}
+        {{- $config := include "wsmon.client.config" (dict "root" $root "probe" $p) | fromJson }}
+        - name: {{ $p.name }}
+          image: {{ include "wsmon.image" $root | quote }}
+          imagePullPolicy: {{ $root.Values.image.pullPolicy }}
+          args: ["client"]
+          securityContext:
+            {{- toYaml $root.Values.securityContext | nindent 12 }}
+          ports:
+            # Own port per container: the Pod shares one network namespace.
+            - name: {{ $portName }}
+              containerPort: {{ $port }}
+              protocol: TCP
+          # Process health only, not WebSocket connectivity.
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ $portName }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: {{ $portName }}
+            periodSeconds: 5
+          env:
+            # Every container in the Pod has the same host name, so each gets
+            # its own WSMON_NAME (client.name, service.instance.id).
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            {{- if not (include "wsmon.scalar" (get $config "WSMON_NAME")) }}
+            - name: WSMON_NAME
+              value: "$(POD_NAME)-{{ $p.name }}"
+            {{- end }}
+            - name: WSMON_URL
+              value: {{ tpl $p.url $root | quote }}
+            - name: WSMON_MODE
+              value: {{ $p.mode | default "pingpong" | quote }}
+            {{- with $labels }}
+            - name: WSMON_LABELS
+              value: {{ . | quote }}
+            {{- end }}
+            - name: WSMON_METRICS_ADDR
+              value: ":{{ $port }}"
+            {{- with $p.resolveOverride }}
+            - name: WSMON_RESOLVE_OVERRIDE
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $p.sniHost }}
+            - name: WSMON_SNI_HOST
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $p.hostHeader }}
+            - name: WSMON_HOST_HEADER
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $headers }}
+            - name: WSMON_HEADERS
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $urlParams }}
+            - name: WSMON_URL_PARAMS
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if $root.Values.auth.enabled }}
+            - name: WSMON_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "wsmon.authSecretName" $root }}
+                  key: {{ $root.Values.auth.secret.key }}
+            {{- end }}
+            {{- with $c.remoteWrite }}
+            {{- if .url }}
+            - name: WSMON_REMOTE_WRITE_URL
+              value: {{ .url | quote }}
+            {{- range $env, $ref := dict "WSMON_REMOTE_WRITE_BEARER_TOKEN" .bearerToken.secret "WSMON_REMOTE_WRITE_USERNAME" .basicAuth.username.secret "WSMON_REMOTE_WRITE_PASSWORD" .basicAuth.password.secret }}
+            {{- if $ref.name }}
+            - name: {{ $env }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $ref.name }}
+                  key: {{ required (printf "client.remoteWrite: secret %s needs a key" $ref.name) $ref.key }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            {{- with include "wsmon.configEnv" $config }}
+            # WSMON_* settings from values; unset keys keep the binary defaults.
+            {{- . | trim | nindent 12 }}
+            {{- end }}
+            {{- with $c.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- with $p.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml ($p.resources | default $c.resources) | nindent 12 }}
+        {{- end }}
+      {{- with $c.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $c.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $c.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

@@ -1,0 +1,25 @@
+# Both roles in one release (self-test): a probe url pointing at this
+# release's server through wsmon.server.wsURL, shared inline auth, distinct
+# selectors, ServiceMonitor for both.
+image: { repository: registry.example.com/wsmon }
+auth:
+  enabled: true
+  token: self-test-token
+server:
+  enabled: true
+  replicaCount: 2
+client:
+  enabled: true
+  labels: { vantage: self-test }
+  probes:
+    - name: direct-pingpong
+      url: '{{ include "wsmon.server.wsURL" . }}'
+      labels: { entrypoint: pod_direct }
+    - name: direct-burst
+      url: '{{ include "wsmon.server.wsURL" . }}'
+      mode: burst
+      labels: { entrypoint: pod_direct }
+    - name: direct-idle
+      url: 'ws://{{ include "wsmon.server.fullname" . }}:{{ .Values.server.port }}/__synthetic/ws'
+      mode: idle
+      labels: { entrypoint: pod_direct }

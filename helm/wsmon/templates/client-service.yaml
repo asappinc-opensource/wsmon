@@ -1,0 +1,25 @@
+{{- if .Values.client.enabled }}
+{{- $ctx := dict "root" . "component" "client" }}
+{{- $mon := include "wsmon.monitoring" $ctx | fromJson }}
+{{- if eq $mon.type "serviceMonitor" }}
+# Metrics-only Service for the ServiceMonitor. No WebSocket traffic flows
+# through it; one port per probe container.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "wsmon.client.fullname" . }}
+  labels:
+    {{- include "wsmon.labels" $ctx | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    {{- range $i, $p := .Values.client.probes }}
+    - name: m-{{ $i }}
+      port: {{ add $.Values.client.metricsBasePort $i }}
+      targetPort: m-{{ $i }}
+      protocol: TCP
+    {{- end }}
+  selector:
+    {{- include "wsmon.selectorLabels" $ctx | nindent 4 }}
+{{- end }}
+{{- end }}

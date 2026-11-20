@@ -1,0 +1,56 @@
+# Client only: PodMonitor top level overridden to none for the client, inline token,
+# remote-write secrets, headers/urlParams merging, config passthrough with
+# numbers/floats/bools, every per-probe field.
+image: { repository: registry.example.com/wsmon }
+monitoring:
+  type: podMonitor
+config:
+  WSMON_LOG_LEVEL: debug
+  WSMON_TRACE_SAMPLE_RATIO: 0.02
+  WSMON_ENABLE_PERMESSAGE_DEFLATE: true
+auth:
+  enabled: true
+  token: test-token
+client:
+  enabled: true
+  fullnameOverride: probes
+  labels:
+    vantage: test
+    target: t1
+  headers:
+    X-Synthetic-Probe: wsmon
+    X-Vantage: test
+  urlParams:
+    source: wsmon
+  config:
+    WSMON_LARGE_PAYLOAD_BYTES: 524288
+    WSMON_REMOTE_WRITE_INTERVAL: 30s
+    WSMON_MESSAGE_TIMEOUT: 1000000
+  env:
+    - { name: TZ, value: UTC }
+  remoteWrite:
+    url: https://rw.example.com/api/v1/write
+    bearerToken:
+      secret: { name: rw-creds, key: token }
+  monitoring:
+    type: none
+  probes:
+    - name: a-pingpong
+      url: wss://a.example.com/__synthetic/ws
+      labels: { entrypoint: a, target: override }
+      resolveOverride: a.example.com:10.0.0.1
+      sniHost: a.example.com
+      hostHeader: a.example.com
+      headers: { X-Vantage: override, X-Entry: a }
+      urlParams: { entry: a, flag: "", count: 1000000 }
+      config: { WSMON_PUSH_INTERVAL_MS: 1000, WSMON_LOG_LEVEL: warn, WSMON_ENABLE_PERMESSAGE_DEFLATE: false }
+      env:
+        - { name: EXTRA, value: "1" }
+      resources:
+        requests: { cpu: 50m, memory: 32Mi }
+        limits: { memory: 64Mi }
+    - name: a-idle
+      url: wss://a.example.com/__synthetic/ws
+      mode: idle
+      labels: { entrypoint: a }
+      config: { WSMON_NAME: "$(POD_NAME)-custom" }

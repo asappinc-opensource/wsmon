@@ -1,0 +1,13 @@
+{
+  "v": 1,
+  "type": "hello_ack",
+  "conn_id": "01J9ZQ8K3T4X5Y6Z7A8B9C0D1E",
+  "server": {
+    "name": "wsmon-server-7d9f8c6b5-xk2mn",
+    "version": "1.2.0"
+  },
+  "accepted_options": {
+    "server_keepalive": false,
+    "push_interval_ms": 0
+  }
+}

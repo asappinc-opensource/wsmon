@@ -1,0 +1,5 @@
+# expect: port and metricsPort must differ
+image: { repository: registry.example.com/wsmon }
+server:
+  enabled: true
+  port: 9090

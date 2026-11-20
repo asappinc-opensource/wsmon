@@ -1,0 +1,14 @@
+{{- if and .Values.server.enabled .Values.server.podDisruptionBudget.enabled }}
+{{- $ctx := dict "root" . "component" "server" }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "wsmon.server.fullname" . }}
+  labels:
+    {{- include "wsmon.labels" $ctx | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.server.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "wsmon.selectorLabels" $ctx | nindent 6 }}
+{{- end }}

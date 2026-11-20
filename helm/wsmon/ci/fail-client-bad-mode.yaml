@@ -1,0 +1,6 @@
+# expect: must be pingpong, burst or idle
+image: { repository: registry.example.com/wsmon }
+client:
+  enabled: true
+  probes:
+    - { name: a, url: "ws://x", mode: push }

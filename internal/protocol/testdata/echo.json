@@ -1,0 +1,14 @@
+{
+  "v": 1,
+  "type": "echo",
+  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "conn_id": "01J9ZQ8K3T4X5Y6Z7A8B9C0D1E",
+  "seq": 1427,
+  "client_send_epoch_ns": 1758537600123456789,
+  "server_recv_epoch_ns": 1758537600145678901,
+  "server_send_epoch_ns": 1758537600145890123,
+  "server": {
+    "name": "wsmon-server-7d9f8c6b5-xk2mn",
+    "version": "1.2.0"
+  }
+}

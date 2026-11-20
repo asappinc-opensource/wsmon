@@ -1,0 +1,4 @@
+# expect: monitoring.type "prometheus" must be serviceMonitor, podMonitor or none
+image: { repository: registry.example.com/wsmon }
+monitoring: { type: prometheus }
+server: { enabled: true }

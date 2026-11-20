@@ -1,0 +1,7 @@
+# expect: remoteWrite.url requires monitoring.type none
+image: { repository: registry.example.com/wsmon }
+client:
+  enabled: true
+  remoteWrite: { url: "https://rw.example.com/api/v1/write" }
+  probes:
+    - { name: a, url: "ws://x" }

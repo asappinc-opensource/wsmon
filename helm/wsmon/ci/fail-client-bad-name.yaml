@@ -1,0 +1,6 @@
+# expect: must be a DNS label
+image: { repository: registry.example.com/wsmon }
+client:
+  enabled: true
+  probes:
+    - { name: Bad_Name, url: "ws://x" }

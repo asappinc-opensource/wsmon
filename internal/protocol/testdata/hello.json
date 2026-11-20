@@ -1,0 +1,1 @@
+{"v":1,"type":"hello","conn_id":"01J9ZQ8K3T4X5Y6Z7A8B9C0D1E","client":{"name":"probe-nimbus-east1-0","mode":"pingpong","version":"1.4.2","labels":{"site":"nimbus-east1","team":"netops"}},"options":{"server_keepalive":false,"push_interval_ms":1000}}

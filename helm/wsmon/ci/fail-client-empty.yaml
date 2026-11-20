@@ -1,0 +1,5 @@
+# expect: probes is empty
+image: { repository: registry.example.com/wsmon }
+client:
+  enabled: true
+  probes: []

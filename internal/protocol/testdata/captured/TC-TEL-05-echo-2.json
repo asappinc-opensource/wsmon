@@ -1,0 +1,1 @@
+{"v":1,"type":"echo","trace_id":"4efac917ad32952208972fa3d94bd4ce","conn_id":"01M7R3FT6PKVDZS3DQB8CTCMBM","seq":2,"client_send_epoch_ns":1795031558410228050,"server_recv_epoch_ns":1795031558411143508,"server_send_epoch_ns":1795031558411215842 ,"server":{"name":"contract-server","version":"dev"}}

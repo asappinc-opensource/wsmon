@@ -1,0 +1,3288 @@
+{
+  "uid": "wsmon-probe",
+  "title": "WebSocket synthetic monitoring — wsmon-probe",
+  "description": "One target seen from the probes: health, latency, connection lifecycle and probe self-health, per entry point.",
+  "tags": [
+    "websocket",
+    "synthetic",
+    "wsmon",
+    "edge"
+  ],
+  "editable": true,
+  "graphTooltip": 1,
+  "schemaVersion": 39,
+  "version": 1,
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "refresh": "1m",
+  "timezone": "",
+  "fiscalYearStartMonth": 0,
+  "liveNow": false,
+  "weekStart": "",
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "links": [],
+  "templating": {
+    "list": [
+      {
+        "type": "datasource",
+        "name": "datasource",
+        "label": "Data source",
+        "query": "prometheus",
+        "current": {},
+        "hide": 0,
+        "refresh": 1,
+        "regex": "",
+        "options": []
+      },
+      {
+        "type": "query",
+        "name": "target",
+        "label": "Target",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": {
+          "query": "label_values(wsmon_client_connection_up, target)",
+          "refId": "target-var"
+        },
+        "definition": "label_values(wsmon_client_connection_up, target)",
+        "refresh": 2,
+        "sort": 1,
+        "multi": false,
+        "includeAll": false,
+        "hide": 0,
+        "current": {},
+        "options": [],
+        "regex": ""
+      },
+      {
+        "type": "query",
+        "name": "vantage",
+        "label": "Vantage",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": {
+          "query": "label_values(wsmon_client_connection_up{target=~\"$target\"}, vantage)",
+          "refId": "vantage-var"
+        },
+        "definition": "label_values(wsmon_client_connection_up{target=~\"$target\"}, vantage)",
+        "refresh": 2,
+        "sort": 1,
+        "multi": false,
+        "includeAll": false,
+        "hide": 0,
+        "current": {},
+        "options": [],
+        "regex": ""
+      },
+      {
+        "type": "query",
+        "name": "entrypoint",
+        "label": "Entry point",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": {
+          "query": "label_values(wsmon_client_connection_up{target=~\"$target\", vantage=~\"$vantage\"}, entrypoint)",
+          "refId": "entrypoint-var"
+        },
+        "definition": "label_values(wsmon_client_connection_up{target=~\"$target\", vantage=~\"$vantage\"}, entrypoint)",
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "hide": 0,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "regex": "",
+        "allValue": ".*"
+      },
+      {
+        "type": "textbox",
+        "name": "canonical",
+        "label": "Canonical entry point",
+        "query": "cdn",
+        "current": {
+          "selected": false,
+          "text": "cdn",
+          "value": "cdn"
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "cdn",
+            "value": "cdn"
+          }
+        ],
+        "hide": 0,
+        "description": "Entry point that carries real user traffic, e.g. the CDN. Used by the indicator, waterfall and vantage panels."
+      },
+      {
+        "type": "custom",
+        "name": "payload",
+        "label": "Payload",
+        "query": "small,large",
+        "current": {
+          "selected": true,
+          "text": "small",
+          "value": "small"
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "small",
+            "value": "small"
+          },
+          {
+            "selected": false,
+            "text": "large",
+            "value": "large"
+          }
+        ],
+        "multi": false,
+        "includeAll": false,
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "id": 1,
+      "title": "Indicators — canonical path ($canonical · pingpong), over the dashboard range",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "id": 2,
+      "title": "Connection availability",
+      "description": "Share of time the connection was up.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "avg(avg_over_time(wsmon_client_connection_up{target=~\"$target\", vantage=~\"$vantage\", entrypoint=\"$canonical\", mode=\"pingpong\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#d03b3b",
+                "value": null
+              },
+              {
+                "color": "#fab219",
+                "value": 0.99
+              },
+              {
+                "color": "#0ca30c",
+                "value": 0.999
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "type": "stat",
+      "id": 3,
+      "title": "Establishment success",
+      "description": "Share of connect attempts that succeeded. Reads 100% when there were no attempts.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "1 - sum(increase(wsmon_client_connect_failures_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=\"$canonical\", mode=\"pingpong\"}[$__range])) / clamp_min(sum(increase(wsmon_client_connect_attempts_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=\"$canonical\", mode=\"pingpong\"}[$__range])), 1)",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#d03b3b",
+                "value": null
+              },
+              {
+                "color": "#fab219",
+                "value": 0.99
+              },
+              {
+                "color": "#0ca30c",
+                "value": 0.999
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "text": "No failures",
+                  "color": "#0ca30c",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "type": "stat",
+      "id": 4,
+      "title": "Message delivery",
+      "description": "Share of sent messages echoed back before the deadline.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(increase(wsmon_client_messages_echoed_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=\"$canonical\", mode=\"pingpong\", payload=\"small\"}[$__range])) / sum(increase(wsmon_client_messages_sent_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=\"$canonical\", mode=\"pingpong\", payload=\"small\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#d03b3b",
+                "value": null
+              },
+              {
+                "color": "#fab219",
+                "value": 0.99
+              },
+              {
+                "color": "#0ca30c",
+                "value": 0.999
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "type": "stat",
+      "id": 5,
+      "title": "Latency ≤ 250 ms",
+      "description": "Share of round trips with RTT at or below 250 ms.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(increase(wsmon_client_rtt_seconds_bucket{target=~\"$target\", vantage=~\"$vantage\", entrypoint=\"$canonical\", mode=\"pingpong\", payload=\"small\", le=\"0.25\"}[$__range])) / sum(increase(wsmon_client_rtt_seconds_count{target=~\"$target\", vantage=~\"$vantage\", entrypoint=\"$canonical\", mode=\"pingpong\", payload=\"small\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#d03b3b",
+                "value": null
+              },
+              {
+                "color": "#fab219",
+                "value": 0.99
+              },
+              {
+                "color": "#0ca30c",
+                "value": 0.999
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "type": "table",
+      "id": 6,
+      "title": "Attribution — one row per entry point",
+      "description": "Health per entry point, outermost first. All rows degraded points to the server; otherwise the innermost degraded row is the faulty layer.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "avg by (entrypoint) (avg_over_time(wsmon_client_connection_up{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode=\"pingpong\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (entrypoint) (increase(wsmon_client_messages_echoed_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode=\"pingpong\", payload=\"$payload\"}[$__range])) / sum by (entrypoint) (increase(wsmon_client_messages_sent_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode=\"pingpong\", payload=\"$payload\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "B",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le, entrypoint) (rate(wsmon_client_rtt_seconds_bucket{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode=\"pingpong\", payload=\"$payload\"}[$__range])))",
+          "legendFormat": "",
+          "refId": "C",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le, entrypoint) (rate(wsmon_client_rtt_net_seconds_bucket{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode=\"pingpong\", payload=\"$payload\"}[$__range])))",
+          "legendFormat": "",
+          "refId": "D",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (entrypoint) (increase(wsmon_client_closes_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode!=\"idle\", close_code=\"1006\"}[$__range])) or 0 * max by (entrypoint) (wsmon_client_connection_up{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode!=\"idle\"})",
+          "legendFormat": "",
+          "refId": "E",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (entrypoint) (increase(wsmon_client_messages_lost_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode!=\"idle\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "F",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (entrypoint) (increase(wsmon_client_connect_failures_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode!=\"idle\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "G",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value #A": "Availability (pingpong)",
+              "Value #B": "Delivery (pingpong)",
+              "Value #C": "p99 RTT",
+              "Value #D": "p99 RTT net",
+              "Value #E": "1006 closes (pingpong+burst)",
+              "Value #F": "Lost msgs (pingpong+burst)",
+              "Value #G": "Connect failures (pingpong+burst)",
+              "entrypoint": "Entry point"
+            },
+            "indexByName": {
+              "entrypoint": 0
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Entry point"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Availability (pingpong)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 3
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#d03b3b",
+                      "value": null
+                    },
+                    {
+                      "color": "#fab219",
+                      "value": 0.99
+                    },
+                    {
+                      "color": "#0ca30c",
+                      "value": 0.999
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Delivery (pingpong)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 3
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#d03b3b",
+                      "value": null
+                    },
+                    {
+                      "color": "#fab219",
+                      "value": 0.99
+                    },
+                    {
+                      "color": "#0ca30c",
+                      "value": 0.999
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p99 RTT"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 3
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p99 RTT net"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 3
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "1006 closes (pingpong+burst)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#0ca30c",
+                      "value": null
+                    },
+                    {
+                      "color": "#d03b3b",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Lost msgs (pingpong+burst)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#0ca30c",
+                      "value": null
+                    },
+                    {
+                      "color": "#d03b3b",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Connect failures (pingpong+burst)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#0ca30c",
+                      "value": null
+                    },
+                    {
+                      "color": "#d03b3b",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "type": "state-timeline",
+      "id": 7,
+      "title": "Connection up — pingpong and burst probes",
+      "description": "1 while the probe's WebSocket connection is established.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 11,
+        "w": 24,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (entrypoint, mode) (wsmon_client_connection_up{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode!=\"idle\"})",
+          "legendFormat": "{{entrypoint}} · {{mode}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#d03b3b",
+                "value": null
+              },
+              {
+                "color": "#0ca30c",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Down",
+                  "color": "#d03b3b"
+                },
+                "1": {
+                  "text": "Up",
+                  "color": "#0ca30c"
+                }
+              }
+            }
+          ],
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "never",
+        "mergeValues": true,
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "id": 8,
+      "title": "Latency — pingpong, payload=$payload",
+      "gridPos": {
+        "x": 0,
+        "y": 17,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "id": 9,
+      "title": "RTT p50 (t4 − t1)",
+      "description": "Median round-trip time, measured on the probe's clock.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 18,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, entrypoint) (rate(wsmon_client_rtt_seconds_bucket{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode=\"pingpong\", payload=\"$payload\"}[$__rate_interval])))",
+          "legendFormat": "{{entrypoint}}",
+          "refId": "A"
+        }
+      ],
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^cdn( |$)/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^pod_direct( |$)/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 10,
+      "title": "RTT p99 (t4 − t1)",
+      "description": "99th percentile round-trip time, measured on the probe's clock.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 18,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le, entrypoint) (rate(wsmon_client_rtt_seconds_bucket{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode=\"pingpong\", payload=\"$payload\"}[$__rate_interval])))",
+          "legendFormat": "{{entrypoint}}",
+          "refId": "A"
+        }
+      ],
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^cdn( |$)/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^pod_direct( |$)/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 11,
+      "title": "Network RTT p50 (rtt − server time)",
+      "description": "Median RTT minus time spent in the echo server: network and proxy time only. Compare layers with this.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, entrypoint) (rate(wsmon_client_rtt_net_seconds_bucket{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode=\"pingpong\", payload=\"$payload\"}[$__rate_interval])))",
+          "legendFormat": "{{entrypoint}}",
+          "refId": "A"
+        }
+      ],
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^cdn( |$)/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^pod_direct( |$)/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 12,
+      "title": "Network RTT p99 (rtt − server time)",
+      "description": "99th percentile RTT minus time spent in the echo server: network and proxy time only.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 26,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le, entrypoint) (rate(wsmon_client_rtt_net_seconds_bucket{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode=\"pingpong\", payload=\"$payload\"}[$__rate_interval])))",
+          "legendFormat": "{{entrypoint}}",
+          "refId": "A"
+        }
+      ],
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^cdn( |$)/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^pod_direct( |$)/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 13,
+      "title": "Layer waterfall — $canonical minus pod_direct (network RTT)",
+      "description": "Network RTT the canonical entry point adds on top of connecting to the server pod directly.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 34,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, vantage) (rate(wsmon_client_rtt_net_seconds_bucket{target=~\"$target\", vantage=~\"$vantage\", entrypoint=\"$canonical\", mode=\"pingpong\", payload=\"$payload\"}[$__rate_interval]))) - histogram_quantile(0.5, sum by (le, vantage) (rate(wsmon_client_rtt_net_seconds_bucket{target=~\"$target\", vantage=~\"$vantage\", entrypoint=\"pod_direct\", mode=\"pingpong\", payload=\"$payload\"}[$__rate_interval])))",
+          "legendFormat": "p50 delta",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le, vantage) (rate(wsmon_client_rtt_net_seconds_bucket{target=~\"$target\", vantage=~\"$vantage\", entrypoint=\"$canonical\", mode=\"pingpong\", payload=\"$payload\"}[$__rate_interval]))) - histogram_quantile(0.99, sum by (le, vantage) (rate(wsmon_client_rtt_net_seconds_bucket{target=~\"$target\", vantage=~\"$vantage\", entrypoint=\"pod_direct\", mode=\"pingpong\", payload=\"$payload\"}[$__rate_interval])))",
+          "legendFormat": "p99 delta",
+          "refId": "B"
+        }
+      ],
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p50 delta"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p99 delta"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9085e9"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 14,
+      "title": "Vantage comparison — $canonical network RTT p50, all vantages",
+      "description": "Median canonical network RTT from every vantage. Ignores the vantage selector.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 34,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, vantage) (rate(wsmon_client_rtt_net_seconds_bucket{target=~\"$target\", entrypoint=\"$canonical\", mode=\"pingpong\", payload=\"$payload\"}[$__rate_interval])))",
+          "legendFormat": "{{vantage}}",
+          "refId": "A"
+        }
+      ],
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "heatmap",
+      "id": 15,
+      "title": "RTT distribution — $entrypoint",
+      "description": "Distribution of round-trip times for the selected payload.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 42,
+        "w": 12,
+        "h": 8
+      },
+      "repeat": "entrypoint",
+      "repeatDirection": "h",
+      "maxPerRow": 2,
+      "interval": "1m",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (le) (increase(wsmon_client_rtt_seconds_bucket{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode=\"pingpong\", payload=\"$payload\"}[$__rate_interval]))",
+          "legendFormat": "{{le}}",
+          "refId": "A",
+          "format": "heatmap"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "calculate": false,
+        "yAxis": {
+          "unit": "s"
+        },
+        "cellGap": 2,
+        "color": {
+          "mode": "scheme",
+          "scheme": "Blues",
+          "steps": 64,
+          "exponent": 0.5,
+          "fill": "#3987e5",
+          "reverse": false
+        },
+        "filterValues": {
+          "le": 1e-09
+        },
+        "rowsFrame": {
+          "layout": "auto"
+        },
+        "tooltip": {
+          "mode": "single",
+          "yHistogram": true
+        },
+        "legend": {
+          "show": true
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 16,
+      "title": "RTT p99 by server replica",
+      "description": "p99 RTT per echo server replica. High for one replica on every entry point means that replica, not a layer.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 50,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le, entrypoint, server_name) (rate(wsmon_client_rtt_seconds_bucket{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode=\"pingpong\", payload=\"$payload\"}[$__rate_interval])))",
+          "legendFormat": "{{server_name}} · {{entrypoint}}",
+          "refId": "A"
+        }
+      ],
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 17,
+      "title": "Server processing p99 (t3 − t2)",
+      "description": "Time the echo server takes to answer a probe. Should be flat and in microseconds.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 50,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le, entrypoint) (rate(wsmon_client_server_processing_seconds_bucket{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode=\"pingpong\"}[$__rate_interval])))",
+          "legendFormat": "{{entrypoint}}",
+          "refId": "A"
+        }
+      ],
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^cdn( |$)/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^pod_direct( |$)/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 18,
+      "title": "Burst completion p99 (first send → last echo)",
+      "description": "Time from the first send to the last echo of a burst (20 messages every 10 s).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 58,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le, entrypoint) (rate(wsmon_client_burst_completion_seconds_bucket{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", payload=\"$payload\"}[$__rate_interval])))",
+          "legendFormat": "{{entrypoint}}",
+          "refId": "A"
+        }
+      ],
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^cdn( |$)/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^pod_direct( |$)/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 19,
+      "title": "Burst RTT p99",
+      "description": "99th percentile RTT of individual burst messages.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 58,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le, entrypoint) (rate(wsmon_client_rtt_seconds_bucket{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode=\"burst\", payload=\"$payload\"}[$__rate_interval])))",
+          "legendFormat": "{{entrypoint}}",
+          "refId": "A"
+        }
+      ],
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^cdn( |$)/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^pod_direct( |$)/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "id": 20,
+      "title": "Connection lifecycle — pingpong and burst",
+      "gridPos": {
+        "x": 0,
+        "y": 66,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "id": 21,
+      "title": "Abnormal closes (1006) by entry point",
+      "description": "Connections dropped without a close frame. The entry point where they appear identifies the component that dropped them.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 67,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (entrypoint) (increase(wsmon_client_closes_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode!=\"idle\", close_code=\"1006\"}[$__rate_interval]))",
+          "legendFormat": "{{entrypoint}}",
+          "refId": "A"
+        }
+      ],
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "drawStyle": "bars"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^cdn( |$)/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^pod_direct( |$)/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 22,
+      "title": "Closes by code and initiator",
+      "description": "1000 client = planned; 1001/1012 = server rollout; 1002 = protocol bug; 1009 = proxy frame limit; 1011 = server fault.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 67,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (close_code, initiator, entrypoint, mode) (increase(wsmon_client_closes_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode!=\"idle\"}[$__rate_interval])) > 0",
+          "legendFormat": "{{close_code}} {{initiator}} · {{entrypoint}} · {{mode}}",
+          "refId": "A"
+        }
+      ],
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "drawStyle": "bars",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 23,
+      "title": "Connect failures by reason",
+      "description": "Failed connect attempts by reason: dns, tcp, tls, auth, http_status, upgrade_rejected, subprotocol, options_rejected, timeout.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 75,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (reason, entrypoint, mode) (increase(wsmon_client_connect_failures_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode!=\"idle\"}[$__rate_interval])) > 0",
+          "legendFormat": "{{reason}} · {{entrypoint}} · {{mode}}",
+          "refId": "A"
+        }
+      ],
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "drawStyle": "bars",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "bargauge",
+      "id": 24,
+      "title": "Handshake phases p50 (since container start)",
+      "description": "Median time per handshake phase, over every connect since the probe started.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 75,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, entrypoint) (wsmon_client_connect_duration_seconds_bucket{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode!=\"idle\", phase=\"dns\"}))",
+          "legendFormat": "{{entrypoint}} · dns",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, entrypoint) (wsmon_client_connect_duration_seconds_bucket{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode!=\"idle\", phase=\"tcp\"}))",
+          "legendFormat": "{{entrypoint}} · tcp",
+          "refId": "B",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, entrypoint) (wsmon_client_connect_duration_seconds_bucket{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode!=\"idle\", phase=\"tls\"}))",
+          "legendFormat": "{{entrypoint}} · tls",
+          "refId": "C",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, entrypoint) (wsmon_client_connect_duration_seconds_bucket{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode!=\"idle\", phase=\"upgrade\"}))",
+          "legendFormat": "{{entrypoint}} · upgrade",
+          "refId": "D",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, entrypoint) (wsmon_client_connect_duration_seconds_bucket{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode!=\"idle\", phase=\"hello\"}))",
+          "legendFormat": "{{entrypoint}} · hello",
+          "refId": "E",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#898781"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^cdn( |$)/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^pod_direct( |$)/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "text",
+        "namePlacement": "left",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 25,
+      "title": "Connection age",
+      "description": "Time since the current connection was established. Drops to 0 on reconnect.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 83,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (mode, entrypoint) (wsmon_client_connection_age_seconds{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode!=\"idle\"})",
+          "legendFormat": "{{mode}} · {{entrypoint}}",
+          "refId": "A"
+        }
+      ],
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 26,
+      "title": "Reconnects",
+      "description": "Connections re-established after the previous one ended.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 83,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (mode, entrypoint) (increase(wsmon_client_reconnects_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode!=\"idle\"}[$__rate_interval])) > 0",
+          "legendFormat": "{{mode}} · {{entrypoint}}",
+          "refId": "A"
+        }
+      ],
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "drawStyle": "bars"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "id": 27,
+      "title": "Throughput and message integrity — pingpong and burst",
+      "gridPos": {
+        "x": 0,
+        "y": 91,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "id": 28,
+      "title": "Throughput — echoed messages per second",
+      "description": "Round trips completed per second. Should be flat (pingpong 1/s, burst 20 per 10 s); a dip means a stall or a drop.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 92,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (mode, entrypoint) (rate(wsmon_client_messages_echoed_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode!=\"idle\"}[$__rate_interval]))",
+          "legendFormat": "{{mode}} · {{entrypoint}}",
+          "refId": "A"
+        }
+      ],
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: msg/s",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 29,
+      "title": "Lost messages (no echo by deadline)",
+      "description": "Messages with no echo before the deadline, including those in flight at a disconnect.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 100,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (mode, payload, entrypoint) (increase(wsmon_client_messages_lost_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode!=\"idle\"}[$__rate_interval])) > 0",
+          "legendFormat": "{{mode}} {{payload}} · {{entrypoint}}",
+          "refId": "A"
+        }
+      ],
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "drawStyle": "bars"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 30,
+      "title": "Late echoes (after deadline)",
+      "description": "Echoes that arrived after the deadline.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 100,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (mode, payload, entrypoint) (increase(wsmon_client_messages_late_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode!=\"idle\"}[$__rate_interval])) > 0",
+          "legendFormat": "{{mode}} {{payload}} · {{entrypoint}}",
+          "refId": "A"
+        }
+      ],
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "drawStyle": "bars"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 31,
+      "title": "Contract anomalies (should be empty)",
+      "description": "Client/server protocol disagreements and clock steps. Should be empty.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 100,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (field, entrypoint) (increase(wsmon_client_messages_mismatched_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode!=\"idle\"}[$__rate_interval])) > 0",
+          "legendFormat": "mismatched {{field}} · {{entrypoint}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (entrypoint) (increase(wsmon_client_messages_duplicate_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode!=\"idle\"}[$__rate_interval])) > 0",
+          "legendFormat": "duplicate · {{entrypoint}}",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (entrypoint) (increase(wsmon_client_messages_out_of_order_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode!=\"idle\"}[$__rate_interval])) > 0",
+          "legendFormat": "out of order · {{entrypoint}}",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (entrypoint) (increase(wsmon_client_messages_unexpected_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode!=\"idle\"}[$__rate_interval])) > 0",
+          "legendFormat": "unexpected · {{entrypoint}}",
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (code, entrypoint) (increase(wsmon_client_server_errors_received_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", code!=\"shutting_down\"}[$__rate_interval])) > 0",
+          "legendFormat": "server error {{code}} · {{entrypoint}}",
+          "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (kind, entrypoint) (increase(wsmon_client_time_anomaly_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\"}[$__rate_interval])) > 0",
+          "legendFormat": "time anomaly {{kind}} · {{entrypoint}}",
+          "refId": "F"
+        }
+      ],
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "drawStyle": "bars"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "id": 32,
+      "title": "Idle timeouts — informational, not part of health",
+      "gridPos": {
+        "x": 0,
+        "y": 108,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "id": 33,
+      "title": "Effective idle timeout",
+      "description": "Longest idle period a connection fully survived over the range: the effective idle timeout of each path. 0 = no rung survived.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 109,
+        "w": 6,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (entrypoint) (\nlabel_replace((sum by (entrypoint) (increase(wsmon_client_idle_probe_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", idle_bucket=\"30\", result=\"survived\"}[$__range])) / (sum by (entrypoint) (increase(wsmon_client_idle_probe_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", idle_bucket=\"30\"}[$__range])) > 0) == bool 1) * 30, \"rung\", \"30\", \"\", \"\")\n  or label_replace((sum by (entrypoint) (increase(wsmon_client_idle_probe_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", idle_bucket=\"60\", result=\"survived\"}[$__range])) / (sum by (entrypoint) (increase(wsmon_client_idle_probe_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", idle_bucket=\"60\"}[$__range])) > 0) == bool 1) * 60, \"rung\", \"60\", \"\", \"\")\n  or label_replace((sum by (entrypoint) (increase(wsmon_client_idle_probe_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", idle_bucket=\"90\", result=\"survived\"}[$__range])) / (sum by (entrypoint) (increase(wsmon_client_idle_probe_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", idle_bucket=\"90\"}[$__range])) > 0) == bool 1) * 90, \"rung\", \"90\", \"\", \"\")\n  or label_replace((sum by (entrypoint) (increase(wsmon_client_idle_probe_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", idle_bucket=\"120\", result=\"survived\"}[$__range])) / (sum by (entrypoint) (increase(wsmon_client_idle_probe_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", idle_bucket=\"120\"}[$__range])) > 0) == bool 1) * 120, \"rung\", \"120\", \"\", \"\")\n  or label_replace((sum by (entrypoint) (increase(wsmon_client_idle_probe_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", idle_bucket=\"300\", result=\"survived\"}[$__range])) / (sum by (entrypoint) (increase(wsmon_client_idle_probe_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", idle_bucket=\"300\"}[$__range])) > 0) == bool 1) * 300, \"rung\", \"300\", \"\", \"\")\n  or label_replace((sum by (entrypoint) (increase(wsmon_client_idle_probe_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", idle_bucket=\"600\", result=\"survived\"}[$__range])) / (sum by (entrypoint) (increase(wsmon_client_idle_probe_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", idle_bucket=\"600\"}[$__range])) > 0) == bool 1) * 600, \"rung\", \"600\", \"\", \"\")\n)",
+          "legendFormat": "{{entrypoint}}",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#898781",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "type": "bargauge",
+      "id": 34,
+      "title": "Idle survival by rung (over the range)",
+      "description": "Share of idle connections that survived each rung. No bar means the rung was not reached.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 109,
+        "w": 10,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (entrypoint) (increase(wsmon_client_idle_probe_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", idle_bucket=\"30\", result=\"survived\"}[$__range])) / (sum by (entrypoint) (increase(wsmon_client_idle_probe_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", idle_bucket=\"30\"}[$__range])) > 0)",
+          "legendFormat": "{{entrypoint}} · 30s",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (entrypoint) (increase(wsmon_client_idle_probe_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", idle_bucket=\"60\", result=\"survived\"}[$__range])) / (sum by (entrypoint) (increase(wsmon_client_idle_probe_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", idle_bucket=\"60\"}[$__range])) > 0)",
+          "legendFormat": "{{entrypoint}} · 60s",
+          "refId": "B",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (entrypoint) (increase(wsmon_client_idle_probe_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", idle_bucket=\"90\", result=\"survived\"}[$__range])) / (sum by (entrypoint) (increase(wsmon_client_idle_probe_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", idle_bucket=\"90\"}[$__range])) > 0)",
+          "legendFormat": "{{entrypoint}} · 90s",
+          "refId": "C",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (entrypoint) (increase(wsmon_client_idle_probe_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", idle_bucket=\"120\", result=\"survived\"}[$__range])) / (sum by (entrypoint) (increase(wsmon_client_idle_probe_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", idle_bucket=\"120\"}[$__range])) > 0)",
+          "legendFormat": "{{entrypoint}} · 120s",
+          "refId": "D",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (entrypoint) (increase(wsmon_client_idle_probe_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", idle_bucket=\"300\", result=\"survived\"}[$__range])) / (sum by (entrypoint) (increase(wsmon_client_idle_probe_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", idle_bucket=\"300\"}[$__range])) > 0)",
+          "legendFormat": "{{entrypoint}} · 300s",
+          "refId": "E",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (entrypoint) (increase(wsmon_client_idle_probe_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", idle_bucket=\"600\", result=\"survived\"}[$__range])) / (sum by (entrypoint) (increase(wsmon_client_idle_probe_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", idle_bucket=\"600\"}[$__range])) > 0)",
+          "legendFormat": "{{entrypoint}} · 600s",
+          "refId": "F",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#898781"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^cdn( |$)/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^pod_direct( |$)/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "text",
+        "namePlacement": "left",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "type": "table",
+      "id": 35,
+      "title": "Idle drops — close code per rung",
+      "description": "How idle connections were dropped, per rung. none = no close frame, detected by echo timeout.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 109,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (entrypoint, idle_bucket, close_code) (increase(wsmon_client_idle_probe_close_total{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\"}[$__range])) > 0",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "entrypoint": "Entry point",
+              "idle_bucket": "Rung (s)",
+              "close_code": "Close code",
+              "Value": "Drops"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "type": "row",
+      "id": 36,
+      "title": "Probe self-health",
+      "gridPos": {
+        "x": 0,
+        "y": 117,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "id": 37,
+      "title": "Probe loop lag p99",
+      "description": "Scheduling delay of the probe's timers. Lag inflates measured latency.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 118,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le, container) (rate(wsmon_client_loop_lag_seconds_bucket{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\"}[$__rate_interval])))",
+          "legendFormat": "{{container}}",
+          "refId": "A"
+        }
+      ],
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 38,
+      "title": "CPU throttling",
+      "description": "Share of CPU periods the probe was throttled. Throttling inflates RTT. Empty when there is no CPU limit.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 118,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (namespace, pod, container) (rate(container_cpu_cfs_throttled_periods_total{container!=\"\"}[$__rate_interval]))\n/ sum by (namespace, pod, container) (rate(container_cpu_cfs_periods_total{container!=\"\"}[$__rate_interval]))\n* on (namespace, pod, container) group_left () count by (namespace, pod, container) (wsmon_client_build_info{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\"})",
+          "legendFormat": "{{container}}",
+          "refId": "A"
+        }
+      ],
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 39,
+      "title": "Clock offset to server (diagnostic)",
+      "description": "Estimated clock difference between probe and server. Diagnostic only; never used to correct measurements.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 118,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "wsmon_client_clock_offset_seconds{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\"}",
+          "legendFormat": "{{container}}",
+          "refId": "A"
+        }
+      ],
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "table",
+      "id": 40,
+      "title": "Probe containers — version, config hash, uptime",
+      "description": "Version, config hash and uptime per probe container. Different hashes on containers that should match mean config drift.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 126,
+        "w": 24,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (pod, container, name, version, go_version) (wsmon_client_build_info{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\"})",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (pod, container, hash) (wsmon_client_config_hash{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\"})",
+          "legendFormat": "",
+          "refId": "B",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "time() - max by (pod, container) (wsmon_client_start_time_seconds{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\"})",
+          "legendFormat": "",
+          "refId": "C",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (pod, container, mode, entrypoint) (wsmon_client_connection_up{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode!=\"idle\"}) or (2 + 0 * max by (pod, container, mode, entrypoint) (wsmon_client_connection_up{target=~\"$target\", vantage=~\"$vantage\", entrypoint=~\"$entrypoint\", mode=\"idle\"}))",
+          "legendFormat": "",
+          "refId": "D",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value #A": true,
+              "Value #B": true
+            },
+            "indexByName": {
+              "container": 0,
+              "name": 1,
+              "entrypoint": 2,
+              "mode": 3,
+              "Value #D": 4,
+              "version": 5,
+              "hash": 6,
+              "Value #C": 7,
+              "go_version": 8,
+              "pod": 9
+            },
+            "renameByName": {
+              "container": "Container",
+              "entrypoint": "Entry point",
+              "mode": "Mode",
+              "Value #D": "Connected",
+              "version": "Version",
+              "hash": "Config hash",
+              "Value #C": "Uptime",
+              "go_version": "Go",
+              "pod": "Pod",
+              "name": "Name"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Container"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Uptime"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Connected"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Down",
+                        "color": "#d03b3b"
+                      },
+                      "1": {
+                        "text": "Up",
+                        "color": "#0ca30c"
+                      },
+                      "2": {
+                        "text": "idle probe",
+                        "color": "#898781"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    }
+  ]
+}
