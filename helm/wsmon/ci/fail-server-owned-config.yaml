@@ -1,0 +1,5 @@
+# expect: config.WSMON_LISTEN_ADDR is set by the chart
+image: { repository: registry.example.com/wsmon }
+server:
+  enabled: true
+  config: { WSMON_LISTEN_ADDR: ":80" }

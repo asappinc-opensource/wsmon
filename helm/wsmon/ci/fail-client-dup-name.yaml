@@ -1,0 +1,7 @@
+# expect: duplicate probe name
+image: { repository: registry.example.com/wsmon }
+client:
+  enabled: true
+  probes:
+    - { name: a, url: "ws://x", labels: { e: "1" } }
+    - { name: a, url: "ws://x", labels: { e: "2" } }

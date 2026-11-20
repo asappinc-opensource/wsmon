@@ -1,0 +1,1 @@
+{"v":1,"type":"hello_ack","conn_id":"01M73NJS1NJ2HWS4C7HSFVEBJR","server":{"pod":"contract-pod","node":"contract-node","az":"contract-az","version":"2.0.0"},"accepted_options":{"server_keepalive":false,"push_interval_ms":1000}}

@@ -1,0 +1,6 @@
+# expect: also set in server.labels
+image: { repository: registry.example.com/wsmon }
+server:
+  enabled: true
+  labels: { node: x }
+  labelsFromFields: { node: spec.nodeName }

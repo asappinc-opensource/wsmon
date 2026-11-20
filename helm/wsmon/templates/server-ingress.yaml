@@ -1,0 +1,51 @@
+{{- if .Values.server.enabled }}
+{{- $fullName := include "wsmon.server.fullname" . }}
+{{- $ctx := dict "root" . "component" "server" }}
+{{- $defaultPaths := list (dict "path" (include "wsmon.server.wsPath" .) "pathType" "Prefix") }}
+{{- range $ingress := .Values.server.ingresses }}
+{{- if $ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $fullName }}-{{ required "server.ingresses[].name is required" $ingress.name }}
+  labels:
+    {{- include "wsmon.labels" $ctx | nindent 4 }}
+  {{- with $ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with $ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- with $ingress.tls }}
+  tls:
+    {{- range . }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      {{- with .secretName }}
+      secretName: {{ . }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range $ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range (.paths | default $defaultPaths) }}
+          - path: {{ .path }}
+            pathType: {{ .pathType | default "Prefix" }}
+            backend:
+              service:
+                name: {{ $fullName }}
+                port:
+                  name: ws
+          {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

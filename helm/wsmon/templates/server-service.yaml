@@ -1,0 +1,28 @@
+{{- if .Values.server.enabled }}
+{{- $ctx := dict "root" . "component" "server" }}
+# WebSocket and metrics. In-cluster URL:
+#   {{ include "wsmon.server.wsURL" . }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "wsmon.server.fullname" . }}
+  labels:
+    {{- include "wsmon.labels" $ctx | nindent 4 }}
+  {{- with .Values.server.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.server.service.type }}
+  ports:
+    - name: ws
+      port: {{ .Values.server.port }}
+      targetPort: ws
+      protocol: TCP
+    - name: metrics
+      port: {{ .Values.server.metricsPort }}
+      targetPort: metrics
+      protocol: TCP
+  selector:
+    {{- include "wsmon.selectorLabels" $ctx | nindent 4 }}
+{{- end }}

@@ -1,0 +1,269 @@
+# wsmon: WebSocket synthetic monitoring.
+#   server  the echo server: Deployment, Service, optional Ingresses, PDB.
+#   client  one probe vantage: one Pod, one container per probe.
+# Turn each role on with server.enabled / client.enabled.
+#
+# Any WSMON_* variable the chart does not set itself can be passed by name in
+# a `config` map; keys left out use the binary's default. Quote values ("10s",
+# "32768") to keep them exactly as written.
+
+image:
+  # Required, e.g. <registry>/wsmon (see `make image`).
+  repository: ""
+  # Empty means .Chart.AppVersion.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# --- shared by both roles ----------------------------------------------------
+
+# Bearer token: the server requires it on connect, the client sends it.
+# Both roles read the same Secret key.
+auth:
+  enabled: false
+  # Existing Secret holding the token (recommended).
+  secret:
+    name: ""
+    key: "authkey"
+  # Inline token, used only when secret.name is empty: the chart then creates
+  # the Secret <fullname>-auth. Not recommended for production.
+  token: ""
+
+# WSMON_* settings for both roles. Only these keys are accepted here:
+#   WSMON_LOG_LEVEL, WSMON_OTLP_ENDPOINT, WSMON_TRACE_SAMPLE_RATIO,
+#   WSMON_ENABLE_PERMESSAGE_DEFLATE, WSMON_SHUTDOWN_TIMEOUT
+# A role's own `config` (and a probe's) wins per key. WSMON_SHUTDOWN_TIMEOUT
+# defaults to 30s (server) and 10s (client); each role's
+# terminationGracePeriodSeconds must exceed it.
+config: {}
+  # WSMON_LOG_LEVEL: "info"
+  # WSMON_OTLP_ENDPOINT: "otel-collector.monitoring.svc:4317"
+
+# Prometheus Operator scraping, for both roles. A role's own `monitoring`
+# block is merged over this one, key by key.
+monitoring:
+  # serviceMonitor | podMonitor | none. ServiceMonitor scrapes through a
+  # Service, PodMonitor scrapes the pods. Use none with client.remoteWrite.
+  type: serviceMonitor
+  interval: 30s
+  scrapeTimeout: ""        # empty: Prometheus global default
+  honorLabels: false
+  labels: {}               # extra labels on the monitor
+  annotations: {}
+  metricRelabelings: []
+  relabelings: []
+  namespace: ""            # create the monitor in another namespace
+
+# Distroless "nonroot" user.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+
+# --- server ------------------------------------------------------------------
+server:
+  enabled: false
+  # Overrides the server's resource names (default <fullname>-server).
+  fullnameOverride: ""
+
+  replicaCount: 2
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+  # Spread replicas across zones and nodes. labelSelector is filled in by the chart.
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: DoNotSchedule
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+
+  # WebSocket port (WSMON_LISTEN_ADDR, Service port "ws"). In-cluster URL:
+  #   ws://<server fullname>.<namespace>.svc.cluster.local:<port><WSMON_WS_PATH>
+  port: 8080
+  # Metrics, /healthz and /readyz (WSMON_METRICS_ADDR, Service port "metrics").
+  metricsPort: 9090
+
+  service:
+    type: ClusterIP
+    annotations: {}
+
+  # Static labels on every server metric and span (WSMON_LABELS), e.g.
+  # { region: us-east-1 }. Prometheus label names, values without ",".
+  # Reserved: name, version, type, code, close_code.
+  labels: {}
+  # Per-pod labels from the Downward API (label name -> fieldPath), added to
+  # WSMON_LABELS. Examples:
+  #   node: spec.nodeName
+  #   zone: metadata.labels['topology.kubernetes.io/zone']   # needs
+  #         PodTopologyLabelsAdmission (Kubernetes 1.33+)
+  labelsFromFields: {}
+
+  # Server WSMON_* settings, e.g. WSMON_WS_PATH,
+  # WSMON_MAX_CONNECTIONS, WSMON_DRAIN_DELAY, WSMON_NAME. Merged over the
+  # top-level `config`. Rejected (set by the chart): WSMON_LISTEN_ADDR,
+  # WSMON_METRICS_ADDR, WSMON_AUTH_TOKEN, WSMON_LABELS.
+  config: {}
+
+  # Extra raw env entries, appended after everything else.
+  env: []
+
+  # 0..n Ingresses (networking.k8s.io/v1), each routed to the ws port:
+  #   - name: public
+  #     enabled: true
+  #     className: nginx
+  #     annotations: {}
+  #     hosts:
+  #       - host: chat.example.com      # no paths: WSMON_WS_PATH, Prefix
+  #       - host: other.example.com
+  #         paths: [{ path: /x, pathType: Prefix }]
+  #     tls: [{ secretName: chat-tls, hosts: [chat.example.com] }]
+  ingresses: []
+
+  # Must exceed WSMON_DRAIN_DELAY + WSMON_SHUTDOWN_TIMEOUT (defaults 5s + 30s).
+  terminationGracePeriodSeconds: 40
+
+  # Avoid a CPU limit (throttling shows up as latency); if one is required,
+  # set it equal to the request.
+  resources:
+    limits:
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+  podAnnotations: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+  serviceAccount:
+    create: true
+    name: ""
+    annotations: {}
+
+  # Merged over the top-level `monitoring`, e.g. { type: podMonitor }.
+  monitoring: {}
+
+# --- client: one vantage = one Pod --------------------------------------------
+client:
+  enabled: false
+  # Overrides the client's resource names (default <fullname>-client).
+  fullnameOverride: ""
+
+  # Labels shared by every probe in this vantage, merged into each container's
+  # WSMON_LABELS (a probe's own `labels` win). Set a label that tells this
+  # vantage apart from the others (e.g. `vantage`), or their series collide.
+  # Reserved: mode, name, version, go_version, hash.
+  labels: {}
+    # vantage: nimbus-east1
+    # target: relay-prod
+
+  # Extra upgrade-request headers for every probe (WSMON_HEADERS), merged like
+  # `labels`. Names and values without ","; names without "=". Logged at
+  # startup: no secrets here.
+  headers: {}
+  # Extra query parameters for every probe's url (WSMON_URL_PARAMS), merged
+  # like `labels`.
+  urlParams: {}
+
+  # Client WSMON_* settings, merged over the top-level
+  # `config`; a probe's own `config` wins per key. Rejected (set by the
+  # chart): WSMON_URL, WSMON_MODE, WSMON_LABELS, WSMON_HEADERS,
+  # WSMON_URL_PARAMS, WSMON_METRICS_ADDR, WSMON_RESOLVE_OVERRIDE,
+  # WSMON_SNI_HOST, WSMON_HOST_HEADER, WSMON_AUTH_TOKEN,
+  # WSMON_REMOTE_WRITE_URL and the remote-write credentials.
+  # WSMON_NAME defaults to "<pod name>-<probe name>"; set it to override.
+  config: {}
+
+  # Extra raw env entries for every container, appended after everything else.
+  env: []
+
+  # Containers share the Pod's network namespace: container i (in `probes`
+  # order) serves /metrics, /healthz and /readyz on metricsBasePort + i.
+  metricsBasePort: 9090
+
+  # Prometheus remote-write push, for probes your Prometheus can't scrape.
+  # Requires client.monitoring.type: none (scrape or push, never both).
+  # Interval and timeout go in `config` (WSMON_REMOTE_WRITE_INTERVAL/_TIMEOUT).
+  # Credentials come only from existing Secrets.
+  remoteWrite:
+    url: ""
+    bearerToken:
+      secret: { name: "", key: "" }
+    basicAuth:
+      username:
+        secret: { name: "", key: "" }
+      password:
+        secret: { name: "", key: "" }
+
+  # One entry per (entry point, mode). Fields:
+  #   name             required; container name (DNS label, unique)
+  #   url              required; WSMON_URL. Rendered with `tpl`, so it can
+  #                    point at this release's server:
+  #                    url: '{{ include "wsmon.server.wsURL" . }}'
+  #   mode             pingpong (default) | burst | idle
+  #   labels           merged over client.labels into WSMON_LABELS
+  #   resolveOverride  WSMON_RESOLVE_OVERRIDE ("host:ip")
+  #   sniHost          WSMON_SNI_HOST
+  #   hostHeader       WSMON_HOST_HEADER
+  #   headers          merged over client.headers into WSMON_HEADERS
+  #   urlParams        merged over client.urlParams into WSMON_URL_PARAMS
+  #   config           per-probe WSMON_* overrides
+  #   env              per-probe raw env entries
+  #   resources        overrides client.resources
+  # Two probes with the same merged labels and mode are rejected.
+  probes: []
+    # - name: cdn-pingpong
+    #   url: wss://chat.example.com/__synthetic/ws
+    #   labels: { entrypoint: cdn }
+    # - name: cdn-idle
+    #   url: wss://chat.example.com/__synthetic/ws
+    #   mode: idle
+    #   labels: { entrypoint: cdn }
+
+  # Must exceed the client's WSMON_SHUTDOWN_TIMEOUT (default 10s).
+  terminationGracePeriodSeconds: 15
+
+  # Per container. Avoid a CPU limit (throttling shows up as latency).
+  resources:
+    limits:
+      memory: 64Mi
+    requests:
+      cpu: 10m
+      memory: 32Mi
+
+  podAnnotations: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+  serviceAccount:
+    create: true
+    name: ""
+    annotations: {}
+
+  # Merged over the top-level `monitoring`, e.g. { type: none } with remoteWrite.
+  monitoring: {}

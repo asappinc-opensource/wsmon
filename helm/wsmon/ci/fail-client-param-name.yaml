@@ -1,0 +1,7 @@
+# expect: urlParams name "a=b" must be non-empty without ',' or '='
+image: { repository: registry.example.com/wsmon }
+client:
+  enabled: true
+  urlParams: { "a=b": "1" }
+  probes:
+    - { name: a, url: "ws://x" }

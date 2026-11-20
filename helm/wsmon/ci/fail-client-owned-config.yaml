@@ -1,0 +1,7 @@
+# expect: config.WSMON_URL is set by the chart
+image: { repository: registry.example.com/wsmon }
+client:
+  enabled: true
+  config: { WSMON_URL: "ws://x" }
+  probes:
+    - { name: a, url: "ws://x" }

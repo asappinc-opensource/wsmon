@@ -1,0 +1,126 @@
+{{- if .Values.server.enabled }}
+{{- $s := .Values.server }}
+{{- $ctx := dict "root" . "component" "server" }}
+{{- $config := include "wsmon.server.config" . | fromJson }}
+{{- $labels := include "wsmon.server.labels" . }}
+# wsmon echo server.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "wsmon.server.fullname" . }}
+  labels:
+    {{- include "wsmon.labels" $ctx | nindent 4 }}
+spec:
+  replicas: {{ $s.replicaCount }}
+  {{- with $s.strategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "wsmon.selectorLabels" $ctx | nindent 6 }}
+  template:
+    metadata:
+      {{- $authChecksum := include "wsmon.authInline" . }}
+      {{- if or $authChecksum $s.podAnnotations }}
+      annotations:
+        {{- if $authChecksum }}
+        checksum/auth: {{ include (print $.Template.BasePath "/secret-auth.yaml") . | sha256sum }}
+        {{- end }}
+        {{- with $s.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      labels:
+        {{- include "wsmon.selectorLabels" $ctx | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "wsmon.serviceAccountName" $ctx }}
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: {{ $s.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: server
+          image: {{ include "wsmon.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["server"]
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            - name: ws
+              containerPort: {{ $s.port }}
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ $s.metricsPort }}
+              protocol: TCP
+          # Health endpoints are on the metrics port.
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          # A draining server leaves the endpoints at once.
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: metrics
+            periodSeconds: 2
+            failureThreshold: 1
+          env:
+            - name: WSMON_LISTEN_ADDR
+              value: ":{{ $s.port }}"
+            - name: WSMON_METRICS_ADDR
+              value: ":{{ $s.metricsPort }}"
+            {{- if .Values.auth.enabled }}
+            - name: WSMON_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "wsmon.authSecretName" . }}
+                  key: {{ .Values.auth.secret.key }}
+            {{- end }}
+            {{- range $k, $path := $s.labelsFromFields | default dict }}
+            - name: {{ include "wsmon.server.fieldEnv" $k }}
+              valueFrom:
+                fieldRef:
+                  fieldPath: {{ $path | quote }}
+            {{- end }}
+            {{- with $labels }}
+            - name: WSMON_LABELS
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with include "wsmon.configEnv" $config }}
+            # WSMON_* settings from values; unset keys keep the binary defaults.
+            {{- . | trim | nindent 12 }}
+            {{- end }}
+            {{- with $s.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml $s.resources | nindent 12 }}
+      {{- with $s.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $s.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $s.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $s.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- range . }}
+        - {{ toYaml . | nindent 10 | trim }}
+          labelSelector:
+            matchLabels:
+              {{- include "wsmon.selectorLabels" $ctx | nindent 14 }}
+        {{- end }}
+      {{- end }}
+{{- end }}

@@ -1,0 +1,6 @@
+# expect: headers "X-A" must have a value without ','
+image: { repository: registry.example.com/wsmon }
+client:
+  enabled: true
+  probes:
+    - { name: a, url: "ws://x", headers: { X-A: "a,b" } }

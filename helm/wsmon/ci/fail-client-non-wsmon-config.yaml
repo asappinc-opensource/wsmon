@@ -1,0 +1,7 @@
+# expect: keys must be WSMON_
+image: { repository: registry.example.com/wsmon }
+client:
+  enabled: true
+  config: { TZ: UTC }
+  probes:
+    - { name: a, url: "ws://x" }

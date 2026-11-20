@@ -1,0 +1,8 @@
+{
+  "v": 1,
+  "type": "error",
+  "conn_id": "01J9ZQ8K3T4X5Y6Z7A8B9C0D1E",
+  "seq": 0,
+  "code": "too_large",
+  "message": "frame exceeds max_frame_bytes (1048576)"
+}

@@ -1,0 +1,1 @@
+{"v":1,"type":"echo","trace_id":"4637a0ef55c65af1c4ba506a7ed085d0","conn_id":"01M73NJS63TP655VEWBQ5WCC8Z","seq":1,"client_send_epoch_ns":1794345886917790298,"server_recv_epoch_ns":1794345886917940965,"server_send_epoch_ns":1794345886917958965 ,"server":{"pod":"contract-pod","node":"contract-node","az":"contract-az","version":"2.0.0"}}

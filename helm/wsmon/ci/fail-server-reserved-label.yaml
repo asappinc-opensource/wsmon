@@ -1,0 +1,5 @@
+# expect: label name "name" is reserved
+image: { repository: registry.example.com/wsmon }
+server:
+  enabled: true
+  labels: { name: x }

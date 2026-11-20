@@ -1,0 +1,4 @@
+# expect: config.WSMON_MODE is not a shared variable
+image: { repository: registry.example.com/wsmon }
+config: { WSMON_MODE: idle }
+server: { enabled: true }

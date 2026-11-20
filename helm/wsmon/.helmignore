@@ -1,0 +1,11 @@
+# Render fixtures (ci/pass-*.yaml render, ci/fail-*.yaml must fail with their "# expect:" line); not packaged.
+ci/
+.DS_Store
+.git/
+*.swp
+*.bak
+*.tmp
+*.orig
+*~
+.idea/
+.vscode/

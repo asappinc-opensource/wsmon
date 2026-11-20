@@ -1,0 +1,44 @@
+# Server only: 2 ingresses, labels + labelsFromFields, config passthrough
+# (custom WS path followed by the default ingress path), PDB, ServiceMonitor.
+image: { repository: registry.example.com/wsmon, tag: "1.0.0" }
+monitoring:
+  labels: { release: monitoring }
+config:
+  WSMON_LOG_LEVEL: debug
+  WSMON_TRACE_SAMPLE_RATIO: 0.05
+auth:
+  enabled: true
+  secret: { name: wsmon-auth, key: authkey }
+server:
+  enabled: true
+  fullnameOverride: echo
+  replicaCount: 3
+  labels: { cluster: example, region: us-east-1 }
+  labelsFromFields:
+    node: spec.nodeName
+    zone: metadata.labels['topology.kubernetes.io/zone']
+  config:
+    WSMON_WS_PATH: /__synthetic/ws2
+    WSMON_MAX_CONNECTIONS: 1000000
+    WSMON_DRAIN_DELAY: 5s
+    WSMON_ENABLE_PERMESSAGE_DEFLATE: false
+    WSMON_LOG_LEVEL: warn
+  env:
+    - { name: TZ, value: UTC }
+  ingresses:
+    - name: public
+      enabled: true
+      className: nginx
+      annotations: { nginx.ingress.kubernetes.io/proxy-read-timeout: "3600" }
+      hosts:
+        - host: chat.example.com
+      tls:
+        - { secretName: chat-tls, hosts: [chat.example.com] }
+    - name: internal
+      enabled: true
+      hosts:
+        - host: chat.internal.example.com
+          paths: [{ path: /custom, pathType: Exact }]
+    - name: disabled
+      enabled: false
+      hosts: [{ host: nope.example.com }]

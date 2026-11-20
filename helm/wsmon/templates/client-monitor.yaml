@@ -1,0 +1,37 @@
+{{- if .Values.client.enabled }}
+{{- $ctx := dict "root" . "component" "client" }}
+{{- $mon := include "wsmon.monitoring" $ctx | fromJson }}
+{{- if ne $mon.type "none" }}
+{{- $podMonitor := eq $mon.type "podMonitor" }}
+apiVersion: monitoring.coreos.com/v1
+kind: {{ ternary "PodMonitor" "ServiceMonitor" $podMonitor }}
+metadata:
+  name: {{ include "wsmon.client.fullname" . }}
+  {{- with $mon.namespace }}
+  namespace: {{ . }}
+  {{- end }}
+  labels:
+    {{- include "wsmon.labels" $ctx | nindent 4 }}
+    {{- with $mon.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with $mon.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if $mon.namespace }}
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "wsmon.selectorLabels" $ctx | nindent 6 }}
+  # One endpoint per probe container (each has its own metrics port).
+  {{ ternary "podMetricsEndpoints" "endpoints" $podMonitor }}:
+    {{- range $i, $p := .Values.client.probes }}
+    {{- include "wsmon.monitorEndpoint" (dict "mon" $mon "port" (printf "m-%d" $i) "path" "/metrics") | nindent 4 }}
+    {{- end }}
+{{- end }}
+{{- end }}

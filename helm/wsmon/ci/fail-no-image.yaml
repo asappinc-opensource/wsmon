@@ -1,0 +1,2 @@
+# expect: image.repository is required
+server: { enabled: true }

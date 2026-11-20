@@ -1,0 +1,8 @@
+{
+  "v": 1,
+  "type": "error",
+  "conn_id": "01J9ZQ8K3T4X5Y6Z7A8B9C0D1E",
+  "seq": 0,
+  "code": "bad_type",
+  "message": "unknown frame type \"pong\""
+}

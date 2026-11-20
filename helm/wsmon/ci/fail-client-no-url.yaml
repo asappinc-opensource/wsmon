@@ -1,0 +1,6 @@
+# expect: url is required
+image: { repository: registry.example.com/wsmon }
+client:
+  enabled: true
+  probes:
+    - { name: a }
