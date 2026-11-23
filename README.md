@@ -405,16 +405,23 @@ helm install wsmon oci://ghcr.io/asappinc-opensource/wsmon-helm/wsmon --version 
 
 Both artifacts are signed with [cosign](https://github.com/sigstore/cosign)
 keyless signing; the image also carries SBOM and provenance attestations.
-To verify:
+To verify, check that the signature comes from this repository's release
+workflow running for that exact tag:
 
 ```sh
-cosign verify ghcr.io/asappinc-opensource/wsmon:X.Y.Z \
-  --certificate-identity-regexp '^https://github.com/asappinc-opensource/wsmon/.github/workflows/release.yaml@refs/tags/v' \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com
-cosign verify ghcr.io/asappinc-opensource/wsmon-helm/wsmon:X.Y.Z \
-  --certificate-identity-regexp '^https://github.com/asappinc-opensource/wsmon/.github/workflows/release.yaml@refs/tags/v' \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+VERSION=X.Y.Z
+IDENTITY=https://github.com/asappinc-opensource/wsmon/.github/workflows/release.yaml@refs/tags/v$VERSION
+ISSUER=https://token.actions.githubusercontent.com
+
+cosign verify ghcr.io/asappinc-opensource/wsmon:$VERSION \
+  --certificate-identity "$IDENTITY" --certificate-oidc-issuer "$ISSUER"
+cosign verify ghcr.io/asappinc-opensource/wsmon-helm/wsmon:$VERSION \
+  --certificate-identity "$IDENTITY" --certificate-oidc-issuer "$ISSUER"
 ```
+
+Prefer `--certificate-identity` (an exact match) over
+`--certificate-identity-regexp`: an unanchored or loosely escaped pattern can
+accept signatures from other workflows or refs.
 
 ## License
 
