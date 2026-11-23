@@ -109,7 +109,13 @@ func TestTel05EchoSpanIsChildOfClientSpan(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	spans := spansNamed(e, telemetry.SpanEcho)
+	// The server ends ws.echo after writing the echo (outside t3 - t2), so
+	// the client can see the echo before the span is recorded.
+	var spans []sdktrace.ReadOnlySpan
+	eventually(t, 2*time.Second, func() bool {
+		spans = spansNamed(e, telemetry.SpanEcho)
+		return len(spans) > 0
+	}, "ws.echo span never ended")
 	if len(spans) != 1 {
 		t.Fatalf("got %d ws.echo spans", len(spans))
 	}
