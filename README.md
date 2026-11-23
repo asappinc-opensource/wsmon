@@ -382,6 +382,38 @@ make test          # unit, integration and client/server contract tests
 make lint          # go vet and gofmt
 make image-local   # build the container image as wsmon:local
 make image IMAGE=ghcr.io/<owner>/wsmon PUSH=1   # multi-arch build and push
+make helm-test     # helm lint, then render every helm/wsmon/ci fixture (needs helm)
+make check-version # Makefile VERSION == Chart version == Chart appVersion
+```
+
+## Releasing
+
+The Makefile `VERSION`, the chart `version` and the chart `appVersion` are
+always the same. To release `X.Y.Z`, set all three to `X.Y.Z` on `main`, then
+push the tag `vX.Y.Z`. The release workflow checks the versions, runs the tests,
+and publishes:
+
+| Artifact | Reference |
+|---|---|
+| Image (linux/amd64, linux/arm64) | `ghcr.io/asappinc-opensource/wsmon:X.Y.Z` |
+| Helm chart | `oci://ghcr.io/asappinc-opensource/wsmon-helm/wsmon --version X.Y.Z` |
+
+```sh
+helm install wsmon oci://ghcr.io/asappinc-opensource/wsmon-helm/wsmon --version X.Y.Z \
+  --set image.repository=ghcr.io/asappinc-opensource/wsmon --set server.enabled=true
+```
+
+Both artifacts are signed with [cosign](https://github.com/sigstore/cosign)
+keyless signing; the image also carries SBOM and provenance attestations.
+To verify:
+
+```sh
+cosign verify ghcr.io/asappinc-opensource/wsmon:X.Y.Z \
+  --certificate-identity-regexp '^https://github.com/asappinc-opensource/wsmon/.github/workflows/release.yaml@refs/tags/v' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+cosign verify ghcr.io/asappinc-opensource/wsmon-helm/wsmon:X.Y.Z \
+  --certificate-identity-regexp '^https://github.com/asappinc-opensource/wsmon/.github/workflows/release.yaml@refs/tags/v' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
 ## License

@@ -1,0 +1,11 @@
+# Build outputs (see Makefile).
+/wsmon
+/wsmon-*
+/dist/
+*.test
+*.out
+
+# Local environment.
+.env
+go.work
+go.work.sum
