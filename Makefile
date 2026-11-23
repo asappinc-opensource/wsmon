@@ -50,12 +50,16 @@ image-local:
 # IMAGE_BUILD_FLAGS is passed through to buildx, e.g. --metadata-file, --sbom,
 # --provenance, --label, --annotation (see .github/workflows/release.yaml).
 BUILDER=wsmon-builder
+# BuildKit image for the builder; empty means buildx's default. CI pins it by
+# digest (see .github/workflows), since it builds the published image.
+BUILDKIT_IMAGE?=
 IMAGE_ARCHIVE=$(BINARY)-$(VERSION)-oci.tar
 IMAGE_OUTPUT=$(if $(PUSH),--platform $(PLATFORMS) --push,$(if $(ARCHIVE),--platform $(PLATFORMS) --output type=oci$(,)dest=$(IMAGE_ARCHIVE),--platform linux/$(HOST_ARCH) --load))
 ,:=,
 setup-buildx:
 	docker buildx inspect $(BUILDER) >/dev/null 2>&1 || \
-		docker buildx create --platform=$(PLATFORMS) --name $(BUILDER) --driver=docker-container
+		docker buildx create --platform=$(PLATFORMS) --name $(BUILDER) --driver=docker-container \
+			$(if $(BUILDKIT_IMAGE),--driver-opt image=$(BUILDKIT_IMAGE))
 	docker buildx inspect --bootstrap $(BUILDER)
 
 image: setup-buildx
@@ -95,13 +99,15 @@ helm-push: helm-package
 
 # One version everywhere: Makefile VERSION == Chart version == Chart appVersion,
 # and == the git tag without its "v" when TAG is set (release.yaml).
+# TAG is read from the environment by the shell ($$TAG), never pasted into the
+# recipe by make: a git tag name may contain shell syntax.
 check-version:
 	@chart=$$(awk '/^version:/{gsub(/"/,"",$$2); print $$2}' $(CHART)/Chart.yaml); \
 	app=$$(awk '/^appVersion:/{gsub(/"/,"",$$2); print $$2}' $(CHART)/Chart.yaml); \
 	rc=0; \
 	[ "$$chart" = "$(VERSION)" ] || { echo "Chart.yaml version $$chart != VERSION $(VERSION)"; rc=1; }; \
 	[ "$$app" = "$(VERSION)" ] || { echo "Chart.yaml appVersion $$app != VERSION $(VERSION)"; rc=1; }; \
-	if [ -n "$(TAG)" ] && [ "$(TAG)" != "v$(VERSION)" ]; then echo "tag $(TAG) != v$(VERSION)"; rc=1; fi; \
+	if [ -n "$${TAG:-}" ] && [ "$$TAG" != "v$(VERSION)" ]; then echo "tag $$TAG != v$(VERSION)"; rc=1; fi; \
 	[ $$rc -eq 0 ] && echo "version $(VERSION) consistent"; exit $$rc
 
 # ---------------------------------------------------------------------------

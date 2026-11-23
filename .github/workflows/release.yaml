@@ -5,10 +5,14 @@ name: Release
 #   chart  oci://ghcr.io/asappinc-opensource/wsmon-helm/wsmon  version X.Y.Z
 # Both are signed with cosign (keyless, GitHub OIDC). The image also carries
 # buildx SBOM and provenance attestations.
+#
+# Two jobs, so nothing untrusted runs where credentials are:
+#   verify   read-only: tag format, tag is on main, versions agree, tests
+#   publish  the `release` environment (required reviewers): build, push, sign
 on:
   push:
     tags:
-      - 'v*'
+      - 'v[0-9]+.[0-9]+.[0-9]+'
 
 # One release at a time; never cancel one halfway through publishing.
 concurrency:
@@ -17,9 +21,47 @@ concurrency:
 
 permissions: {}
 
+env:
+  TAG: ${{ github.ref_name }}
+
 jobs:
-  release:
+  verify:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0   # full history, for the ancestry check below
+
+      - name: Check tag
+        run: |
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::tag must be vX.Y.Z"
+            exit 1
+          fi
+          # Only release commits that are already on main (reviewed, CI-green).
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::$TAG ($GITHUB_SHA) is not on main"
+            exit 1
+          fi
+          # Tag, Makefile VERSION, Chart version and appVersion must all agree.
+          make check-version
+
+      - name: Test
+        # Runs unpinned build containers, so it stays out of the publish job.
+        run: make lint test helm-test
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    # Required reviewers are configured on this environment in repo settings.
+    environment: release
     permissions:
       contents: read
       packages: write   # push image and chart to GHCR
@@ -28,8 +70,9 @@ jobs:
       IMAGE: ghcr.io/${{ github.repository }}
       CHART_REPO: oci://ghcr.io/${{ github.repository_owner }}/wsmon-helm
       SOURCE_URL: ${{ github.server_url }}/${{ github.repository }}
-      TAG: ${{ github.ref_name }}
-      # buildx's SBOM generator, pinned rather than BuildKit's floating default.
+      # The builder that compiles the published image, and buildx's SBOM
+      # generator: both pinned rather than floating buildx defaults.
+      BUILDKIT_IMAGE: moby/buildkit:v0.35.1@sha256:baf6138eb8c37644800c7c913fba051e840ebb9ba13eaf92d92ef9a1712d0b4c
       SBOM_GENERATOR: docker/buildkit-syft-scanner:stable-1@sha256:873a7458c3c8ac8e32c7b796c10e1600b07b963d2aa000a72a2d97aaaa2d6315
     defaults:
       run:
@@ -40,14 +83,6 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      - name: Check versions
-        # Tag, Makefile VERSION, Chart version and appVersion must all agree.
-        run: make check-version TAG="$TAG"
-
-      - name: Test
-        # A tag can point at any commit, not only one that passed CI on main.
-        run: make lint test helm-test
 
       - name: Install cosign
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
@@ -61,7 +96,7 @@ jobs:
 
       - name: Build and push image
         run: |
-          make image PUSH=1 IMAGE="$IMAGE" IMAGE_BUILD_FLAGS="\
+          make image PUSH=1 IMAGE="$IMAGE" BUILDKIT_IMAGE="$BUILDKIT_IMAGE" IMAGE_BUILD_FLAGS="\
             --metadata-file $RUNNER_TEMP/image-metadata.json \
             --sbom=generator=$SBOM_GENERATOR --provenance=mode=max \
             --label org.opencontainers.image.source=$SOURCE_URL \

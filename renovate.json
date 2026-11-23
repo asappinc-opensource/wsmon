@@ -38,7 +38,7 @@
       "groupName": "ci"
     },
     {
-      "description": "Images pinned inside workflow env, e.g. SBOM_GENERATOR in release.yaml",
+      "description": "Images pinned inside workflow env (BUILDKIT_IMAGE, SBOM_GENERATOR)",
       "matchFileNames": [
         ".github/workflows/**"
       ],
@@ -89,12 +89,12 @@
     },
     {
       "customType": "regex",
-      "description": "Digest-pinned images in workflow env: NAME: <image>:<tag>@sha256:<digest>",
+      "description": "Digest-pinned images in workflow env: NAME_IMAGE|NAME_GENERATOR: <image>:<tag>@sha256:<digest>",
       "managerFilePatterns": [
         "/^\\.github/workflows/[^/]+\\.ya?ml$/"
       ],
       "matchStrings": [
-        "[A-Z_]+_GENERATOR: (?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
+        "[A-Z_]+_(?:GENERATOR|IMAGE): (?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
       ],
       "datasourceTemplate": "docker"
     }

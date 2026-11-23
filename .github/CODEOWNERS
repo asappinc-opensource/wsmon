@@ -1,0 +1,7 @@
+# Code owners are requested for review on every PR that touches their paths.
+# Enforced only when the main branch ruleset turns on "Require review from
+# Code Owners". The team needs write access to this repository.
+
+# Everything, including the build and release pipeline:
+# .github/ (workflows, this file), Makefile, Dockerfile, renovate.json, helm/.
+*  @asappinc-opensource/maintainers
