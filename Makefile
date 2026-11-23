@@ -5,8 +5,12 @@ BINARY=wsmon
 GO_VERSION=1.27
 
 # All Go commands run inside a build container; no local Go toolchain is needed.
+# -buildvcs=false: the container runs as root, and on Linux hosts (CI) the
+# bind-mounted checkout belongs to another uid, so git refuses it ("dubious
+# ownership") and every `go build`, including the ones tests run, fails with
+# "error obtaining VCS status". The version comes from -ldflags instead.
 GO_IMAGE=golang:$(GO_VERSION)
-GO_DOCKER=docker run --rm $(GO_DOCKER_ENV) \
+GO_DOCKER=docker run --rm -e GOFLAGS=-buildvcs=false $(GO_DOCKER_ENV) \
 	-v $(CURDIR):/work -w /work \
 	-v wsmon-gomod:/go/pkg/mod -v wsmon-gobuild:/root/.cache/go-build \
 	$(GO_IMAGE)
