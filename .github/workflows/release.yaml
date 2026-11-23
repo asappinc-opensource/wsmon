@@ -120,7 +120,8 @@ jobs:
 
       - name: Sign chart
         run: |
-          digest=$(sed -n 's/^Digest: *//p' "$RUNNER_TEMP/helm-push.log" | head -1)
+          # The last Digest line: make helm-push retries, see the Makefile.
+          digest=$(sed -n 's/^Digest: *//p' "$RUNNER_TEMP/helm-push.log" | tail -1)
           test -n "$digest" || { echo "no digest in helm push output"; exit 1; }
           chart="${CHART_REPO#oci://}/wsmon@$digest"
           echo "chart: $chart"

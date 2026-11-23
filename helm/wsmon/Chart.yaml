@@ -8,8 +8,8 @@ type: application
 # version and appVersion both equal the Makefile VERSION (no "v" prefix):
 # one release tag vX.Y.Z publishes image X.Y.Z and chart X.Y.Z.
 # `make check-version` enforces this. appVersion is the default image.tag.
-version: 1.0.0
-appVersion: "1.0.0"
+version: 1.0.1
+appVersion: "1.0.1"
 # The first entry becomes the OCI source annotation, which links the pushed
 # chart to this repository on GHCR.
 sources:
