@@ -1,5 +1,5 @@
 IMAGE?=wsmon
-VERSION?=1.0.0
+VERSION?=1.0.1
 PLATFORMS=linux/amd64,linux/arm64
 BINARY=wsmon
 GO_VERSION=1.27
@@ -93,9 +93,16 @@ helm-test:
 helm-package:
 	helm package $(CHART) -d $(CHART_DIST)
 
-# Prints helm's "Digest: sha256:..." line; release.yaml signs that digest.
+# Prints helm's "Digest: sha256:..." line; release.yaml signs the last one.
+# Retried: GHCR can answer 404 when helm tags the manifest it has just
+# uploaded ('failed to perform "Tag" on destination ... not found'). The
+# same .tgz always has the same digest, so a retry is idempotent.
+HELM_PUSH_ATTEMPTS?=4
 helm-push: helm-package
-	helm push $(CHART_DIST)/$(BINARY)-$(VERSION).tgz $(CHART_REPO)
+	@n=1; until helm push $(CHART_DIST)/$(BINARY)-$(VERSION).tgz $(CHART_REPO); do \
+		[ $$n -ge $(HELM_PUSH_ATTEMPTS) ] && { echo "helm push failed after $$n attempts"; exit 1; }; \
+		echo "helm push attempt $$n failed; retrying in $$((n * 5))s"; sleep $$((n * 5)); n=$$((n + 1)); \
+	done
 
 # One version everywhere: Makefile VERSION == Chart version == Chart appVersion,
 # and == the git tag without its "v" when TAG is set (release.yaml).
