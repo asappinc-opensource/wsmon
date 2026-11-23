@@ -115,4 +115,6 @@ jobs:
           # Report in the job log rather than uploading SARIF, which would
           # need security-events: write.
           advanced-security: false
-          version: 1.33.1
+          # No `version`: the action accepts only zizmor releases it knows,
+          # and its default is fixed by the pinned commit above, so Renovate
+          # moves zizmor whenever it bumps the action.
