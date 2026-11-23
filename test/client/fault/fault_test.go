@@ -45,7 +45,7 @@ func rttWindow(h *harness, n float64, timeout time.Duration, payloads ...string)
 
 // TC-FAULT-01: 200 ms latency on the server→client direction only.
 // wsmon_client_rtt_seconds mean rises by 200 ms ±20 %; the server-processing p50
-// bucket is unchanged.
+// bucket is unchanged (within one bucket; see below).
 func TestFault01_Latency(t *testing.T) {
 	requireEnv(t)
 	px, hp := newProxy(t)
@@ -67,9 +67,25 @@ func TestFault01_Latency(t *testing.T) {
 	}
 	bp, fp := base["server_processing"].Quantile(0.5), fault["server_processing"].Quantile(0.5)
 	t.Logf("server processing: baseline %v; with latency %v", base["server_processing"], fault["server_processing"])
-	if bp != fp {
-		t.Errorf("wsmon_client_server_processing_seconds p50 bucket changed: %v → %v", bp, fp)
+	// Server processing (~50 µs) sits on a bucket boundary, so with few
+	// samples its p50 can land one bucket either side by scheduling noise
+	// alone. Latency leaking into t3 − t2 would move it by ~200 ms, many
+	// buckets; allow one bucket of drift.
+	bi, fi := bucketIndex(base["server_processing"], bp), bucketIndex(fault["server_processing"], fp)
+	if bi < 0 || fi < 0 || fi-bi > 1 || bi-fi > 1 {
+		t.Errorf("wsmon_client_server_processing_seconds p50 bucket changed: %v → %v (more than one bucket)", bp, fp)
 	}
+}
+
+// bucketIndex is the index of bound among h's bucket bounds, or -1 (for
+// example +Inf, which Quantile returns when no finite bucket qualifies).
+func bucketIndex(h Hist, bound float64) int {
+	for i, b := range h.Bounds {
+		if b == bound {
+			return i
+		}
+	}
+	return -1
 }
 
 // TC-FAULT-02: bandwidth cap 64 kbps (8 KB/s) client→server. large RTT
