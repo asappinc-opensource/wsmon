@@ -180,12 +180,14 @@ func TestReassertViaMetrics(t *testing.T) {
 		h := newTelHarness(t, idleEnv("ws://"+px.Addr+fakeserver.Path, "WSMON_LABELS", telLabels), false)
 		b0, b1 := config.IdleBucketLabel(h.cfg.IdleLadder[0]), config.IdleBucketLabel(h.cfg.IdleLadder[1])
 		u := L{"site": "tel-site", "path": "direct"}
+		// The client counts the drop and its close code in two increments, and
+		// a scrape can land between them, so wait for both to agree.
 		s := h.Wait("rung 2 dropped by the proxy", func(s *Scrape) bool {
-			return s.Counter("wsmon_client_idle_probe_total", with(u, "idle_bucket", b1, "result", "dropped")) >= 1
+			dropped := s.Counter("wsmon_client_idle_probe_total", with(u, "idle_bucket", b1, "result", "dropped"))
+			return dropped >= 1 &&
+				s.Counter("wsmon_client_idle_probe_close_total", with(u, "idle_bucket", b1, "close_code", "1006")) == dropped
 		}, D(60*time.Second, 10*time.Second))
-		dropped := s.Counter("wsmon_client_idle_probe_total", with(u, "idle_bucket", b1, "result", "dropped"))
-		if s.Counter("wsmon_client_idle_probe_close_total", with(u, "idle_bucket", b1, "close_code", "1006")) != dropped ||
-			s.Counter("wsmon_client_idle_probe_total", with(u, "idle_bucket", b0, "result", "survived")) < 1 ||
+		if s.Counter("wsmon_client_idle_probe_total", with(u, "idle_bucket", b0, "result", "survived")) < 1 ||
 			s.Counter("wsmon_client_idle_probe_total", with(u, "idle_bucket", b0, "result", "dropped")) != 0 ||
 			s.Counter("wsmon_client_idle_probe_total", with(u, "idle_bucket", b1, "result", "survived")) != 0 {
 			t.Errorf("/metrics:\n%s", grepWS(s.Raw))
