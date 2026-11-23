@@ -1,0 +1,102 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:best-practices"
+  ],
+  "schedule": [
+    "on friday"
+  ],
+  "minimumReleaseAge": "5 days",
+  "minimumReleaseAgeBehaviour": "timestamp-optional",
+  "packageRules": [
+    {
+      "description": "Go toolchain everywhere it appears: go.mod, Dockerfile, Makefile",
+      "matchDatasources": [
+        "golang-version"
+      ],
+      "groupName": "go"
+    },
+    {
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "golang"
+      ],
+      "groupName": "go"
+    },
+    {
+      "matchDatasources": [
+        "go"
+      ],
+      "groupName": "go modules"
+    },
+    {
+      "matchManagers": [
+        "github-actions"
+      ],
+      "groupName": "ci"
+    },
+    {
+      "description": "Images pinned inside workflow env, e.g. SBOM_GENERATOR in release.yaml",
+      "matchFileNames": [
+        ".github/workflows/**"
+      ],
+      "groupName": "ci"
+    },
+    {
+      "description": "The Makefile tracks tags only; its images are not digest-pinned",
+      "matchFileNames": [
+        "Makefile"
+      ],
+      "pinDigests": false
+    },
+    {
+      "description": "Merge low-risk updates once required checks pass; majors always wait for review",
+      "matchUpdateTypes": [
+        "patch",
+        "pin",
+        "pinDigest",
+        "digest"
+      ],
+      "automerge": true,
+      "platformAutomerge": true
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Makefile GO_VERSION=<major.minor>, the golang build/test container tag",
+      "managerFilePatterns": [
+        "/^Makefile$/"
+      ],
+      "matchStrings": [
+        "GO_VERSION=(?<currentValue>[0-9.]+)"
+      ],
+      "depNameTemplate": "golang",
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "Makefile <NAME>_IMAGE?=<image>:<tag> (test sidecars)",
+      "managerFilePatterns": [
+        "/^Makefile$/"
+      ],
+      "matchStrings": [
+        "[A-Z_]+_IMAGE\\?=(?<depName>[^:\\s]+):(?<currentValue>[^\\s]+)"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "Digest-pinned images in workflow env: NAME: <image>:<tag>@sha256:<digest>",
+      "managerFilePatterns": [
+        "/^\\.github/workflows/[^/]+\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "[A-Z_]+_GENERATOR: (?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ]
+}

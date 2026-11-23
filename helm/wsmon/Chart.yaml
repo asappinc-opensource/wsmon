@@ -5,12 +5,15 @@ description: >-
   (client), or both, from the single wsmon image. Turn each role on with
   server.enabled / client.enabled.
 type: application
-# Chart version, SemVer MAJOR.MINOR.PATCH. Bump it whenever the chart changes
-# (ci/ fixtures excepted).
-version: 0.1.0
-# The image tag `make image` produces: the Makefile VERSION, no "v" prefix.
-# Used as the default image.tag; keep it equal to the Makefile VERSION.
+# version and appVersion both equal the Makefile VERSION (no "v" prefix):
+# one release tag vX.Y.Z publishes image X.Y.Z and chart X.Y.Z.
+# `make check-version` enforces this. appVersion is the default image.tag.
+version: 1.0.0
 appVersion: "1.0.0"
+# The first entry becomes the OCI source annotation, which links the pushed
+# chart to this repository on GHCR.
+sources:
+  - https://github.com/asappinc-opensource/wsmon
 keywords:
   - monitoring
   - websocket

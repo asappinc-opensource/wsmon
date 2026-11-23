@@ -11,7 +11,9 @@ GO_DOCKER=docker run --rm $(GO_DOCKER_ENV) \
 	-v wsmon-gomod:/go/pkg/mod -v wsmon-gobuild:/root/.cache/go-build \
 	$(GO_IMAGE)
 LDFLAGS=-w -s -X main.version=$(VERSION)
-BUILD_ARGS=--build-arg VERSION=$(VERSION) --build-arg GO_VERSION=$(GO_VERSION)
+# The Dockerfile pins its own base images; GO_VERSION here is only the test/build
+# container. Keep the two in step (Renovate groups them).
+BUILD_ARGS=--build-arg VERSION=$(VERSION)
 HOST_OS:=$(shell uname -s | tr '[:upper:]' '[:lower:]')
 HOST_ARCH:=$(shell uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')
 
@@ -24,6 +26,7 @@ CONTRACT_TOKEN?=contract-test-token
 
 .PHONY: image-local image setup-buildx \
 	test test-acceptance test-contract test-contract-image test-fault test-soak lint fmt tidy \
+	helm-test helm-package helm-push check-version \
 	build-local build-linux-amd64 build-linux-arm64 build-darwin-amd64 build-darwin-arm64 build-all-archs \
 	run-server run-client clean info
 
@@ -40,6 +43,8 @@ image-local:
 #   make image PUSH=1           all $(PLATFORMS), pushed to IMAGE's registry, e.g.
 #                               make image IMAGE=ghcr.io/<owner>/wsmon PUSH=1
 #   make image ARCHIVE=1        all $(PLATFORMS), written to $(IMAGE_ARCHIVE)
+# IMAGE_BUILD_FLAGS is passed through to buildx, e.g. --metadata-file, --sbom,
+# --provenance, --label, --annotation (see .github/workflows/release.yaml).
 BUILDER=wsmon-builder
 IMAGE_ARCHIVE=$(BINARY)-$(VERSION)-oci.tar
 IMAGE_OUTPUT=$(if $(PUSH),--platform $(PLATFORMS) --push,$(if $(ARCHIVE),--platform $(PLATFORMS) --output type=oci$(,)dest=$(IMAGE_ARCHIVE),--platform linux/$(HOST_ARCH) --load))
@@ -50,7 +55,50 @@ setup-buildx:
 	docker buildx inspect --bootstrap $(BUILDER)
 
 image: setup-buildx
-	docker buildx build --builder $(BUILDER) $(IMAGE_OUTPUT) $(BUILD_ARGS) -t $(IMAGE):$(VERSION) .
+	docker buildx build --builder $(BUILDER) $(IMAGE_OUTPUT) $(BUILD_ARGS) $(IMAGE_BUILD_FLAGS) -t $(IMAGE):$(VERSION) .
+
+# ---------------------------------------------------------------------------
+# Helm chart (needs a local helm).
+
+CHART=helm/wsmon
+CHART_DIST=dist
+# helm push appends the chart name: oci://ghcr.io/<owner>/wsmon-helm/wsmon.
+CHART_REPO?=oci://ghcr.io/asappinc-opensource/wsmon-helm
+
+# helm lint, then every ci/ fixture: pass-*.yaml must render, fail-*.yaml must
+# fail with an error containing its "# expect:" line.
+helm-test:
+	helm lint $(CHART)
+	@rc=0; for f in $(CHART)/ci/*.yaml; do \
+		name=$$(basename $$f); out=$$(helm template wsmon $(CHART) -f $$f 2>&1); status=$$?; \
+		case $$name in \
+		pass-*) if [ $$status -ne 0 ]; then echo "FAIL $$name: did not render"; echo "$$out" | tail -3; rc=1; else echo "ok   $$name"; fi ;; \
+		fail-*) expect=$$(sed -n 's/^# expect: //p' $$f | head -1); \
+			if [ -z "$$expect" ]; then echo "FAIL $$name: no '# expect:' line"; rc=1; \
+			elif [ $$status -eq 0 ]; then echo "FAIL $$name: rendered, expected: $$expect"; rc=1; \
+			elif ! printf '%s' "$$out" | grep -qF -- "$$expect"; then echo "FAIL $$name: expected: $$expect"; echo "$$out" | tail -3; rc=1; \
+			else echo "ok   $$name"; fi ;; \
+		*) echo "FAIL $$name: fixtures must be named pass-* or fail-*"; rc=1 ;; \
+		esac; \
+	done; exit $$rc
+
+helm-package:
+	helm package $(CHART) -d $(CHART_DIST)
+
+# Prints helm's "Digest: sha256:..." line; release.yaml signs that digest.
+helm-push: helm-package
+	helm push $(CHART_DIST)/$(BINARY)-$(VERSION).tgz $(CHART_REPO)
+
+# One version everywhere: Makefile VERSION == Chart version == Chart appVersion,
+# and == the git tag without its "v" when TAG is set (release.yaml).
+check-version:
+	@chart=$$(awk '/^version:/{gsub(/"/,"",$$2); print $$2}' $(CHART)/Chart.yaml); \
+	app=$$(awk '/^appVersion:/{gsub(/"/,"",$$2); print $$2}' $(CHART)/Chart.yaml); \
+	rc=0; \
+	[ "$$chart" = "$(VERSION)" ] || { echo "Chart.yaml version $$chart != VERSION $(VERSION)"; rc=1; }; \
+	[ "$$app" = "$(VERSION)" ] || { echo "Chart.yaml appVersion $$app != VERSION $(VERSION)"; rc=1; }; \
+	if [ -n "$(TAG)" ] && [ "$(TAG)" != "v$(VERSION)" ]; then echo "tag $(TAG) != v$(VERSION)"; rc=1; fi; \
+	[ $$rc -eq 0 ] && echo "version $(VERSION) consistent"; exit $$rc
 
 # ---------------------------------------------------------------------------
 # Tests (all in the Go build container).
@@ -180,6 +228,7 @@ run-client: build-local
 
 clean:
 	rm -f $(BINARY) $(BINARY)-*
+	rm -rf $(CHART_DIST)
 	docker rmi $(LOCAL_IMAGE) || true
 	docker buildx rm $(BUILDER) || true
 

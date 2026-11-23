@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+# Cancel superseded PR runs; runs on main always finish.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Nothing by default; each job asks for what it needs.
+permissions: {}
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check versions
+        run: make check-version
+      - name: Lint
+        run: make lint
+
+  test:
+    # Explicit name, so the required check doesn't embed the runner label.
+    name: test (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Test
+        run: make test
+
+  docker-tests:
+    # Contract and fault suites against the image built from this tree. One
+    # make invocation, so wsmon:local is built once for both.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Contract and fault suites
+        run: make test-contract-image test-fault SHORT=1
+
+  helm:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # helm comes preinstalled on GitHub's Ubuntu runner image.
+      - name: Lint and render fixtures
+        run: |
+          helm version
+          make helm-test
+      - name: Package
+        run: make helm-package
+
+  image:
+    # Builds both platforms exactly as release.yaml does, minus the push, so a
+    # broken cross-build fails here instead of after a tag exists.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build all platforms
+        run: make image ARCHIVE=1
+
+  workflows:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: actionlint
+        uses: docker://rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+        with:
+          args: -color
+      - name: zizmor
+        uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
+        with:
+          # Report in the job log rather than uploading SARIF, which would
+          # need security-events: write.
+          advanced-security: false
+          version: 1.33.1
