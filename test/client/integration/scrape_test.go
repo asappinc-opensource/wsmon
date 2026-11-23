@@ -308,11 +308,13 @@ func (h *telHarness) Wait(what string, cond func(*Scrape) bool, timeout time.Dur
 	}
 }
 
-// grepWS keeps the non-zero sample lines, for failure messages.
+// grepWS keeps the non-zero sample lines, for failure messages. It drops
+// histogram bucket series (name_bucket{...}) but keeps series that merely
+// carry a label ending in _bucket, such as idle_bucket.
 func grepWS(raw string) string {
 	var out []string
 	for _, l := range strings.Split(raw, "\n") {
-		if l != "" && !strings.HasPrefix(l, "#") && !strings.HasSuffix(l, " 0") && !strings.Contains(l, "_bucket") {
+		if l != "" && !strings.HasPrefix(l, "#") && !strings.HasSuffix(l, " 0") && !strings.Contains(l, "_bucket{") {
 			out = append(out, l)
 		}
 	}
